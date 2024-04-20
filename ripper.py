@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 import shutil
+import signal
 import sys
 
 # Setting up a simple signal handler to handle graceful shutdown requests
