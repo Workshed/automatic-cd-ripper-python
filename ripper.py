@@ -22,7 +22,7 @@ def wait_for_cd(drive_path='/dev/cdrom'):
                     print("CD detected, proceeding to rip.")
                     return True
             except IOError:
-                print("Drive not ready, waiting for CD...")
+                pass
         else:
             print("Drive not found, check the drive path.")
         time.sleep(30)  # Check every 30 seconds
