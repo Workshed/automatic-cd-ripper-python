@@ -2,16 +2,29 @@ import os
 import time
 import subprocess
 import shutil
+import sys
+
+# Setting up a simple signal handler to handle graceful shutdown requests
+def signal_handler(sig, frame):
+    print('Exiting gracefully')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 def wait_for_cd(drive_path='/dev/cdrom'):
+    """Wait for a CD to be inserted into the drive."""
     while True:
         if os.path.exists(drive_path):
             try:
                 with open(drive_path, 'rb') as f:
-                    return
+                    print("CD detected, proceeding to rip.")
+                    return True
             except IOError:
-                print("Waiting for CD...")
-        time.sleep(5)
+                print("Drive not ready, waiting for CD...")
+        else:
+            print("Drive not found, check the drive path.")
+        time.sleep(10)  # Check every 10 seconds
 
 def rip_cd(output_directory):
     print("Ripping the CD with metadata to", output_directory)
@@ -51,15 +64,15 @@ def eject():
     subprocess.call(["eject"])
 
 def main():
-    drive_path = '/dev/cdrom'
     output_directory = '/home/workshed/ripped'
     network_path = '//Workhorse/MainShare/Media/Music'
     mount_point = '/mnt/workhorse_music'
-    wait_for_cd(drive_path)
-    rip_cd(output_directory)
-    mount_network_drive(network_path, mount_point)
-    copy_to_network(output_directory, mount_point)
-    eject()
+    while True:  # Main loop to continuously check for CDs and process them
+        if wait_for_cd():
+            rip_cd(output_directory)
+            mount_network_drive(network_path, mount_point)
+            copy_to_network(output_directory, mount_point)
+            eject()
 
 if __name__ == "__main__":
     main()
