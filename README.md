@@ -38,6 +38,21 @@ Make a folder for your mount point, I used `/mnt/workhorse_music`:
 sudo mkdir /mnt/workhorse_music
 ```
 
+Create a new file to store your credentials, such as `/etc/cifs-credentials`.
+Add the username and password to the file:
+
+```
+username=myusername
+password=mypassword
+```
+
+Secure the file by restricting its access to root only:
+
+```
+sudo chown root:root /etc/cifs-credentials
+sudo chmod 600 /etc/cifs-credentials
+```
+
 Open `/etc/fstab` with a text editor (as root or with sudo):
 
 ```bash
@@ -47,7 +62,7 @@ sudo nano /etc/fstab
 Add a line for your network drive:
 
 ```
-//SERVER/Share /mnt/workhorse_music cifs username=your_username,password=your_password,uid=1000,gid=1000 0 0
+//SERVER/Share /mnt/workhorse_music cifs credentials=/etc/cifs-credentials,uid=1000,gid=1000 0 0
 ```
 
 Replace 1000 with your user and group IDs (find these with id command), and adjust username and password for the network share access.
