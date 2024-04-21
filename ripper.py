@@ -40,7 +40,7 @@ def rip_cd(output_directory):
         '--outputdir', output_directory, 
         '--coverpath', 'cover.jpg',
         '--coverart', '1',
-        '--nointeraction'
+        '--nointeraction',
         '--precmd', '"python fetch_cover.py $artist $album ."'
     ])
 
