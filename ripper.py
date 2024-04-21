@@ -40,8 +40,8 @@ def rip_cd(output_directory):
         '--outputdir', output_directory, 
         '--coverpath', 'cover.jpg',
         '--coverart', '1',
-        '--precmd', '\'"python fetch_cover.py $artist $album ."\''
         '--nointeraction'
+        '--precmd', '"python fetch_cover.py $artist $album ."'
     ])
 
 def mount_network_drive(network_path, mount_point):
