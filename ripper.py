@@ -4,6 +4,12 @@ import subprocess
 import shutil
 import signal
 import sys
+import requests
+from dotenv import load_dotenv
+import discogs_client
+
+# Load environment variables
+load_dotenv()
 
 # Setting up a simple signal handler to handle graceful shutdown requests
 def signal_handler(sig, frame):
@@ -36,6 +42,39 @@ def mount_network_drive(network_path, mount_point):
         print(f"Mounting the network drive: {network_path}")
         subprocess.run(['sudo', 'mount', '-t', 'cifs', network_path, mount_point, '-o', 'username=guest,password=r3]wZ1-2'])
 
+def download_cover_art(artist_name, album_title, target_path):
+    # Get user token from environment variables
+    user_token = os.getenv('DISCOGS_USER_TOKEN')
+    if not user_token:
+        print("DISCOGS_USER_TOKEN is not set in .env file.")
+        return
+    
+    d = discogs_client.Client('automatic-cd-ripper-workshed/0.1', user_token=user_token)
+    
+    try:
+        # Search for releases by artist name and album title
+        results = d.search(artist=artist_name, release_title=album_title, type='release')
+        releases = list(results.page(1))
+        
+        if releases:
+            # Pick the first release matching the query
+            release = releases[0]
+            print(f"Found release: {release.title} by {release.artists[0].name}")
+            
+            # Try to get the primary image of the release
+            if release.images:
+                front_cover_url = release.images[0]['uri']
+                response = requests.get(front_cover_url)
+                with open(os.path.join(target_path, "cover.jpg"), "wb") as img_file:
+                    img_file.write(response.content)
+                print("Downloaded front cover art")
+            else:
+                print("No image available for this release.")
+        else:
+            print("No releases found for the given artist and album title.")
+    except Exception as e:
+        print(f"Couldn't find album art: {e}")
+
 def copy_to_network(output_directory, mount_point):
     """Copy the ripped album directories to the network drive while maintaining the artist/album structure."""
     # Ensure we only look at directories directly under the output directory
@@ -44,6 +83,7 @@ def copy_to_network(output_directory, mount_point):
         if os.path.isdir(artist_path):  # Ensure it's a directory
             for album in os.listdir(artist_path):
                 album_path = os.path.join(artist_path, album)
+                download_cover_art(artist, album, album_path)
                 if os.path.isdir(album_path):  # Ensure it's a directory
                     # Construct the target path on the network drive
                     network_artist_path = os.path.join(mount_point, artist)
