@@ -31,4 +31,32 @@ dirtemplate="$artist/$album"
 
 Save and exit the file.
 
+We're going to mount the network drive using `fstab`.
+Make a folder for your mount point, I used `/mnt/workhorse_music`:
+
+```
+sudo mkdir /mnt/workhorse_music
+```
+
+Open `/etc/fstab` with a text editor (as root or with sudo):
+
+```bash
+sudo nano /etc/fstab
+```
+
+Add a line for your network drive:
+
+```
+//SERVER/Share /mnt/workhorse_music cifs username=your_username,password=your_password,uid=1000,gid=1000 0 0
+```
+
+Replace 1000 with your user and group IDs (find these with id command), and adjust username and password for the network share access.
+
+Test the configuration by attempting to mount all entries:
+
+```bash
+sudo mount -a
+```
+
+This command will try to mount everything defined in fstab and is a good way to ensure there are no errors in your configuration.
 
