@@ -35,7 +35,12 @@ def wait_for_cd(drive_path='/dev/cdrom'):
 
 def rip_cd(output_directory):
     print("Ripping the CD with metadata to", output_directory)
-    subprocess.run(['ripit', '-c', '2', '--outputdir', output_directory, '--nointeraction'])
+    subprocess.run([
+        'ripit', '-c', '2', 
+        '--outputdir', output_directory, 
+        '--precmd', '\'"python fetch_cover.py $artist $album ."\''
+        '--nointeraction'
+    ])
 
 def mount_network_drive(network_path, mount_point):
     if not os.path.ismount(mount_point):
@@ -83,7 +88,7 @@ def copy_to_network(output_directory, mount_point):
         if os.path.isdir(artist_path):  # Ensure it's a directory
             for album in os.listdir(artist_path):
                 album_path = os.path.join(artist_path, album)
-                download_cover_art(artist, album, album_path)
+                # download_cover_art(artist, album, album_path)
                 if os.path.isdir(album_path):  # Ensure it's a directory
                     # Construct the target path on the network drive
                     network_artist_path = os.path.join(mount_point, artist)
