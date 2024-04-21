@@ -29,7 +29,6 @@ def wait_for_cd(drive_path='/dev/cdrom'):
 
 def rip_cd(output_directory):
     print("Ripping the CD with metadata to", output_directory)
-    #subprocess.run(['ripit', '--encoder', 'flac', '--outputdir', output_directory])
     subprocess.run(['ripit', '-c', '2', '--outputdir', output_directory, '--nointeraction'])
 
 def mount_network_drive(network_path, mount_point):
