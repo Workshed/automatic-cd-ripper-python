@@ -7,6 +7,7 @@ import sys
 import requests
 from dotenv import load_dotenv
 import discogs_client
+import shlex
 
 # Load environment variables
 load_dotenv()
@@ -35,13 +36,39 @@ def wait_for_cd(drive_path='/dev/cdrom'):
 
 def rip_cd(output_directory):
     print("Ripping the CD with metadata to", output_directory)
+    subprocess.run(
+        f'ripit -c 2 --verbose 3 --outputdir {output_directory} --coverart 1 --coverpath {os.path.join(output_directory, "cover.jpg")} --precmd \'"python /home/workshed/ripper/fetch_cover.py -a $artist -b $album -t {output_directory}"\' --nointeraction',
+        shell=True
+    )
+
+def fancy_rip_cd(output_directory):
+    artist_var = '$artist'  # Shell variables should be escaped manually if needed
+    album_var = '$album'
+    script_path = '/home/workshed/ripper/fetch_cover.py'
+    cover_path = os.path.join(output_directory, "cover.jpg")
+
+    # Prepare the command string with proper escaping
+    precmd_command = f'python {shlex.quote(script_path)} {artist_var} {album_var} {shlex.quote(output_directory)}'
+    precmd_escaped = f"\\'{precmd_command}\\'"  # Escape single quotes for shell
+
+    # Full command to run
+    command = (
+        f'ripit -c 2 --verbose 3 --outputdir {shlex.quote(output_directory)} '
+        f'--coverart 1 --coverpath {shlex.quote(cover_path)} '
+        f'--precmd {precmd_escaped} --nointeraction'
+    )
+
+    # Execute the command
+    subprocess.run(command, shell=True)
+
+def old_rip_cd(output_directory):
     subprocess.run([
         'ripit', '-c', '2', 
         '--outputdir', output_directory, 
         '--coverpath', 'cover.jpg',
         '--coverart', '1',
         '--nointeraction',
-        '--precmd', '"python fetch_cover.py $artist $album ."'
+        '--precmd', '\'"python fetch_cover.py \'$artist\' \'$album\' ."\''
     ])
 
 def mount_network_drive(network_path, mount_point):
@@ -82,6 +109,23 @@ def download_cover_art(artist_name, album_title, target_path):
     except Exception as e:
         print(f"Couldn't find album art: {e}")
 
+def copy_file_if_exists(source_directory, destination_directory, filename="cover.jpg"):
+    """Copy a file from source to destination directory if it exists."""
+    source_file = os.path.join(source_directory, filename)
+    destination_file = os.path.join(destination_directory, filename)
+
+    # Check if the source file exists
+    if os.path.exists(source_file):
+        try:
+            # Attempt to copy the file
+            subprocess.run(['cp', source_file, destination_file], check=True)
+            print(f"Successfully copied {filename} to {destination_directory}.")
+        except subprocess.CalledProcessError as e:
+            # Handle errors during the copy process
+            print(f"Failed to copy {filename}: {e}")
+    else:
+        print(f"No file found to copy: {source_file}")
+
 def copy_to_network(output_directory, mount_point):
     """Copy the ripped album directories to the network drive while maintaining the artist/album structure."""
     # Ensure we only look at directories directly under the output directory
@@ -92,6 +136,10 @@ def copy_to_network(output_directory, mount_point):
                 album_path = os.path.join(artist_path, album)
                 # download_cover_art(artist, album, album_path)
                 if os.path.isdir(album_path):  # Ensure it's a directory
+                    # Copy the cover art to the album directory
+                    copy_file_if_exists(output_directory, album_path, "cover.jpg")
+                    #subprocess.run(['cp', os.path.join(output_directory, "cover.jpg"), os.path.join(album_path, "cover.jpg")], check=True)
+                    #print(f"Copying cover art from {os.path.join(output_directory, "cover.jpg")} to {os.path.join(album_path, "cover.jpg")}")
                     # Construct the target path on the network drive
                     network_artist_path = os.path.join(mount_point, artist)
                     network_album_path = os.path.join(network_artist_path, album)
@@ -106,6 +154,10 @@ def copy_to_network(output_directory, mount_point):
                     # Optionally delete the local album directory after copying
                     shutil.rmtree(album_path)
                     print(f"Deleted local directory {album_path}")
+            # Check if the artist directory is empty after deleting all album directories
+            if not os.listdir(artist_path):  # This checks if the list is empty
+                shutil.rmtree(artist_path)
+                print(f"Deleted empty artist directory {artist_path}")
 
 def eject():
     subprocess.call(["eject"])
